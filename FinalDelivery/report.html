@@ -1,0 +1,71 @@
+<HTML>
+	<head>
+		<style type="text/css">
+			h3 {
+				padding: 10px;
+				margin: 10px;
+				font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+				color: #527ACC;
+			}
+			
+			p {
+				padding: 10px;
+				margin: 10px;
+				font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+			}
+		</style>
+	</head>
+	
+	<body>
+		<h3>
+			Name: Abdullah Jasim<br>
+			Student Number: 301093885<br>
+			SFU User-name: ajasim<br>
+			Lecture Section: D100<br>
+			Instructor: Brian Booth<br>
+			TA: Scott Kristjanson
+		</h3>
+		
+		<p><b>Overview:</b><br>
+			Lyrebird decrypts encrypted tweet files by the use of server-client socket connections. The server reads in the configuration file, which contains a list of input and output files. Each
+			input file contains 0 to many encrypted tweets, and the result is written onto the output file. Each client connects to the server using an IP address and a port number, both of which are
+			printed nto the terminal once the server starts up. Each client creates several child processes depending on the CPU it is running on. The reason is to have many processes working on the
+			decryption in parallel, and to finish the task quickly.
+		</p>
+		
+		<p><b>Design & Implementation:</b><br>
+			The server begins by regular sanity checks. Then it creates a socket, and calls the bindSocket function, which binds the socket to a free port. It then begins handling requests. Handling requests
+			has 2 parts: accepting new connections, and checking existing ones for any newly received messages. Two dynamic arrays are used, each with an initial size of 10 to keep track of the file descriptors
+			for the clients, as well as their IP's. Each time the arrays overflow, they are doubled in size and reallocated.
+		<br><br>
+
+			Meanwhile, the client will connect to the server. Once the connection is successful, the client will create several child processes. Once a child process is created, it sends an initial ready message to the parent, which will in turn relay it to the server. Once the server receives that message, it will read a new line from the file and send it to the client. The client will then check that message, if (according to the protocol defined) it indicates that the client should exit, then the client will quit handling its child process. It will then read any final messages from the child processes, and then send an empty byte to them, asking them to exit. Once the child processes have exited, the client will close its end of the socket. This sends a signal to the server. Once enough signals have been received, the parent will then close its end of the socket, the files and exit.	
+		<br><br>
+
+			However, if the server still has lines to process in the configuration file, then it will send those to the client and hence to the child processes. The child process will attempt to decrypt the files
+			and send a message back to the server containing the file name, the child's process ID, and a result byte. The result indicates whether the child was successful in decrypting the tweet, or if it was unable to find a specified file. These messages, once received by the server, will be converted to logs which are stored in the logging file.
+		<br><br>
+
+			The biggest challenge was handling the closing protocol. If the server would ask the client to close, and the client would ask the children to close and they would close, the final files and their logs would simply go missing. Hence I had to make use of several echo messages between the child and the client, and the client and the server to ensure that no deadlocks happen.
+		<br><br>
+		</p>
+
+		<p><b>Testing:</b><br>
+			For testing, I used the following pattern for the config file:
+			input1.txt output1.txt<br>
+			input2.txt<br>
+			<br>
+			input4.txt output4.txt weird4.txt<br>
+			<br>
+			<br>
+			<br>
+			<br>
+			input5.txt output5.txt<br>
+
+			The first line tests the ground case: existing file and standard format. The second line tests if there's no output file, as well as a non-existing file. The third file tests for an empty line - no input or output files. The fourth line tests for an existing file, and an extra parameter in the line. While the last few lines test again for empty lines and a final regular case. As for the contents of each file I used the files from the previous assignments.
+		<br><br>
+
+			I also tested for irregular input parameters for both the server and the client. Testing for cornercases in the connection was a difficult task. I tested for wrong IP address / port number for the client. I however could not test for sudden disconnection between the client and the server, as well as multiple clients. I tried my best to support as many clients as possible; however, it's all theoretical and is not tested. The reason is due to time, as I had faced several challenges simply allowing the client to exit gracefully.
+		</p>
+	</body>
+</HTML>
